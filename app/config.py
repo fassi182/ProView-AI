@@ -124,3 +124,10 @@ class ProViewConfig:
                 os.environ["LANGCHAIN_PROJECT"] = cls.LANGCHAIN_PROJECT
         except Exception as e:
             raise ValueError(f"Environment setup failed: {str(e)}")
+
+# Expose PROVIEW_API_KEY as a class attribute for modules that reference it directly
+try:
+    ProViewConfig.PROVIEW_API_KEY = ProViewConfig.get_proview_api_key()
+except Exception:
+    # Keep class usable even if secrets unavailable at import time
+    ProViewConfig.PROVIEW_API_KEY = "default-secret-key-change-me"

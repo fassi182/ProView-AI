@@ -113,6 +113,7 @@ if time.time() - st.session_state.last_activity > SESSION_TIMEOUT_SECONDS:
 def process_uploaded_file(uploaded_file, session_id: str) -> tuple[bool, str]:
     """Process uploaded file and add to vector database"""
     try:
+        # Local processing: validate and write temp file, then call process_file
         # Validate file extension
         file_ext = os.path.splitext(uploaded_file.name)[-1].lower()
         if file_ext not in ProViewConfig.ALLOWED_EXTENSIONS:
@@ -132,7 +133,7 @@ def process_uploaded_file(uploaded_file, session_id: str) -> tuple[bool, str]:
             with open(temp_path, "wb") as f:
                 f.write(uploaded_file.getvalue())
             
-            # Process file
+            # Process file locally
             chunks_created = process_file(temp_path, session_id)
             
             logger.info(f"✅ Processed {uploaded_file.name} ({chunks_created} chunks)")
@@ -157,8 +158,7 @@ def get_ai_response(user_message: str, history: list, session_id: str) -> dict:
                 "role": msg["role"],
                 "content": msg["content"] if isinstance(msg["content"], str) else msg["content"]
             })
-        
-        # Get response
+        # Get response locally (directly call app.services)
         response = get_proview_response(
             user_input=user_message,
             chat_history=formatted_history,
