@@ -5,7 +5,7 @@ import os
 import logging
 from typing import Optional
 
-# Local .env support
+# Load local .env if exists
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -72,7 +72,6 @@ if "last_activity" not in st.session_state:
     st.session_state.last_activity = time.time()
 
 st.session_state.last_activity = time.time()
-
 SESSION_TIMEOUT_SECONDS = 30 * 60
 if time.time() - st.session_state.last_activity > SESSION_TIMEOUT_SECONDS:
     try:
@@ -131,23 +130,99 @@ def get_ai_response(user_message: str, history: list, session_id: str) -> dict:
         }
     except Exception as e:
         logger.error(f"Error getting AI response: {str(e)}")
-        st.error(f"❌ Backend error: {str(e)}")  # Shows real error
+        st.error(f"❌ Backend error: {str(e)}")  # Show real error
         return {
             "interviewer_chat": "I encountered an error. Please try again or reset the session.",
             "suggested_replies": ["Reset session", "Try different question"]
         }
+
+def reset_session():
+    try:
+        clear_session_data(st.session_state.session_id)
+    except:
+        pass
+    st.session_state.messages = []
+    st.session_state.documents_uploaded = 0
+    st.session_state.session_id = str(uuid.uuid4())
+    st.session_state.last_error = None
 
 # --- INITIALIZE SYSTEM ---
 if not st.session_state.initialized:
     with st.spinner("Initializing ProView AI..."):
         success, message = initialize_system()
         if not success:
-            st.error(f"Initialization failed: {message}")
+            st.error(f"⚠️ Initialization Failed: {message}")
             st.stop()
 
-# --- SIDEBAR, CHAT INPUT, FILE UPLOAD, FOOTER ---
-# You can include all your previous sidebar, chat input, and file upload code here
-# (I can integrate full HTML+CSS + sidebar if needed)
+# --- PAGE GUI ---
+# Inject CSS for styling
+st.markdown("""
+<style>
+.main { background-color: #0e1117; }
+.stChatMessage { border-radius: 15px; margin-bottom: 10px; }
+.status-box { padding: 10px; border-radius: 10px; border: 1px solid #30363d; background-color: #161b22; margin-bottom: 20px; }
+.processing { animation: pulse 1.5s infinite; color: #58a6ff; font-weight: bold; }
+.metric-container { background: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; margin: 10px 0; }
+@keyframes pulse {0% { opacity: 1; }50% { opacity: 0.5; }100% { opacity: 1; }}
+</style>
+""", unsafe_allow_html=True)
 
-st.title("🎓 ProView AI Coach")
-st.write("Prepare for your next career move with RAG-powered interview simulation.")
+# Sidebar
+with st.sidebar:
+    st.title("⚙️ ProView Control")
+    st.caption("Precision Interview Evaluation")
+
+    # Session info
+    st.subheader("📊 Session Info")
+    st.code(f"ID: {st.session_state.session_id[:12]}...")
+    st.metric("💬 Messages", len(st.session_state.messages))
+    st.metric("📄 Documents", st.session_state.documents_uploaded)
+
+    # Clear session buttons
+    if st.button("Clear Chat Only"):
+        st.session_state.messages = []
+        st.toast("💬 Chat cleared", icon="✅")
+        st.rerun()
+    if st.button("Clear All Data"):
+        reset_session()
+        st.toast("🗑️ All session data cleared", icon="✅")
+        st.rerun()
+
+# Header
+col1, col2 = st.columns([0.7, 0.3])
+with col1:
+    st.title("🎓 ProView AI Coach")
+    st.markdown("Prepare for your next career move with **RAG-powered** interview simulation.")
+with col2:
+    st.success("🟢 Ready")
+
+# File upload
+with st.expander("📁 Knowledge Base (Upload Resume/Job Description)"):
+    uploaded_files = st.file_uploader(
+        "Upload PDF/DOCX/TXT", accept_multiple_files=True,
+        type=['pdf', 'docx', 'txt'], label_visibility="collapsed"
+    )
+    if uploaded_files:
+        for file in uploaded_files:
+            success, msg = process_uploaded_file(file, st.session_state.session_id)
+            st.toast(msg if success else f"⚠️ {msg}")
+
+# Display chat
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"] if isinstance(msg["content"], str) else msg["content"].get("interviewer_chat", ""))
+
+# Chat input
+if prompt := st.chat_input("Start by telling ProView which role you're interviewing for..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("assistant"):
+        placeholder = st.empty()
+        placeholder.markdown("<p class='processing'>🤔 ProView is thinking...</p>", unsafe_allow_html=True)
+        ai_data = get_ai_response(prompt, st.session_state.messages, st.session_state.session_id)
+        placeholder.empty()
+        st.markdown(ai_data.get("interviewer_chat", ""))
+        st.session_state.messages.append({"role": "assistant", "content": ai_data})
+
+# Footer
+st.markdown("---")
+st.caption("🔒 Privacy-First: Data is session-isolated and auto-deleted after 30 minutes.")
