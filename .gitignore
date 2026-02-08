@@ -44,17 +44,7 @@ venv.bak/
 *~
 .DS_Store
 
-# Vector Database (Don't commit user data!)
-proview_db/
-*.db
-*.sqlite
-*.sqlite3
 
-# Temporary Files
-temp/
-temp_*
-*.tmp
-*.log
 
 # Uploaded Files (User data - don't commit!)
 uploads/
