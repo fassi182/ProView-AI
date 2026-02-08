@@ -1,6 +1,4 @@
-# ProView AI - Git Ignore File
-
-# Environment Variables (CRITICAL - Never commit!)
+# Environment Variables
 .env
 .env.local
 .env.*.local
@@ -8,71 +6,38 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
 # Virtual Environments
 venv/
 env/
-ENV/
-env.bak/
-venv.bak/
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-.DS_Store
 
-
-
-# Uploaded Files (User data - don't commit!)
+# User uploads
 uploads/
 *.pdf
 *.docx
 *.txt
+!requirements.txt
 
-# Jupyter Notebooks
+# Vector DB files
+*.db
+*.sqlite
+*.faiss
+*.pkl
+
+# Jupyter
 .ipynb_checkpoints
 *.ipynb
 
 # Testing
 .pytest_cache/
 .coverage
-htmlcov/
-.tox/
-.nox/
 
-# MyPy
+# Type checkers
 .mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
 .pyre/
-
-# pytype static type analyzer
 .pytype/
-
-# Cython debug symbols
-cython_debug/
+.streamlit/secrets.toml
