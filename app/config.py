@@ -1,0 +1,40 @@
+#app/config.py
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class ProViewConfig:
+    # API Keys
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+    PROVIEW_API_KEY = os.getenv("PROVIEW_API_KEY", "default-secret-key-change-me")
+    
+    # Model Configuration
+    MODEL_NAME = "llama-3.3-70b-versatile"
+    TEMPERATURE = 0.3
+    
+    # LangChain Tracing
+    LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "false")
+    LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
+    LANGCHAIN_PROJECT = "ProView-AI-Production"
+    
+    # Storage Configuration
+    PERSIST_DIRECTORY = "./proview_db"
+    EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+    
+    # Security & Cleanup
+    SESSION_TIMEOUT_HOURS = 2
+    MAX_FILE_SIZE_MB = 10
+    ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt"}
+    
+    # Rate Limiting
+    RATE_LIMIT_REQUESTS = 10
+    RATE_LIMIT_WINDOW_SECONDS = 60
+    
+    @classmethod
+    def validate(cls):
+        """Validate critical configuration"""
+        if not cls.GROQ_API_KEY:
+            raise ValueError("GROQ_API_KEY must be set in environment variables")
+        if cls.PROVIEW_API_KEY == "default-secret-key-change-me":
+            print("⚠️ WARNING: Using default PROVIEW_API_KEY. Change this in production!")
