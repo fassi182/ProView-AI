@@ -1,9 +1,11 @@
-#app/llm_logic.py
+# app/llm_logic.py
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage, AIMessage
 from app.schemas import ProViewCoachOutput
 from app.config import ProViewConfig
 import logging
+from typing import List, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -13,14 +15,20 @@ def get_proview_chain():
     
     Returns:
         Configured chain with structured output
+        
+    Raises:
+        Exception: If chain initialization fails
     """
     try:
         # Initialize LLM with structured output
         llm = ChatGroq(
-            api_key=ProViewConfig.get_groq_api_key(),  # Updated
+            api_key=ProViewConfig.GROQ_API_KEY, 
             model_name=ProViewConfig.MODEL_NAME,
             temperature=ProViewConfig.TEMPERATURE
-        ).with_structured_output(ProViewCoachOutput)
+        )
+        
+        # Apply structured output schema
+        structured_llm = llm.with_structured_output(ProViewCoachOutput)
 
         # Enhanced system prompt for interview coaching
         system_prompt = """You are ProView AI Coach, an expert interview preparation assistant. Your role is to:
@@ -54,11 +62,13 @@ def get_proview_chain():
 - If user hasn't specified a role, ask them first
 
 **Response Format:**
-- interviewer_chat: Your main conversational response
-- is_correct: True/False (only when evaluating an answer)
-- score: "X/10" format (only when evaluating)
-- refined_explanation: Detailed feedback (only when evaluating)
-- suggested_replies: 2-3 helpful suggestions for user
+- interviewer_chat: Your main conversational response (REQUIRED - never empty)
+- is_correct: True/False (only when evaluating an answer, otherwise null)
+- score: "X/10" format (only when evaluating, otherwise null)
+- refined_explanation: Detailed feedback (only when evaluating, otherwise null)
+- suggested_replies: 2-3 helpful suggestions for user (can be empty list if not applicable)
+
+IMPORTANT: The interviewer_chat field must ALWAYS contain a meaningful response. Never leave it empty.
 """
 
         # Create prompt template with history support
@@ -69,33 +79,63 @@ def get_proview_chain():
         ])
         
         # Return configured chain
-        chain = prompt | llm
-        logger.info("ProView chain initialized successfully")
+        chain = prompt | structured_llm
+        logger.info("✅ ProView chain initialized successfully")
         return chain
         
     except Exception as e:
-        logger.error(f"Error initializing ProView chain: {str(e)}")
+        logger.error(f"❌ Error initializing ProView chain: {str(e)}", exc_info=True)
         raise
 
-def format_chat_history(messages: list) -> list:
+def format_chat_history(messages: List[dict]) -> List[Union[HumanMessage, AIMessage]]:
     """
     Convert message history to LangChain format
     
     Args:
-        messages: List of message dictionaries
+        messages: List of message dictionaries with 'role' and 'content' keys
         
     Returns:
         Formatted message list for LangChain
     """
     formatted = []
-    for msg in messages:
-        if msg["role"] == "user":
-            formatted.append(("human", msg["content"]))
-        elif msg["role"] == "assistant":
-            # Handle both string and dict content
-            content = msg["content"]
-            if isinstance(content, dict):
-                content = content.get("interviewer_chat", str(content))
-            formatted.append(("assistant", content))
     
+    if not messages:
+        return formatted
+    
+    try:
+        for msg in messages:
+            # Validate message structure
+            if not isinstance(msg, dict):
+                logger.warning(f"Skipping invalid message format: {type(msg)}")
+                continue
+                
+            role = msg.get("role")
+            content = msg.get("content")
+            
+            if not role or not content:
+                logger.warning(f"Skipping message with missing role or content")
+                continue
+            
+            # Extract content string
+            if isinstance(content, dict):
+                # If content is a dict (from AI response), extract interviewer_chat
+                content_str = content.get("interviewer_chat", "")
+                if not content_str:
+                    # Fallback to string representation if no interviewer_chat
+                    content_str = str(content)
+            else:
+                content_str = str(content)
+            
+            # Create appropriate message type
+            if role == "user":
+                formatted.append(HumanMessage(content=content_str))
+            elif role == "assistant":
+                formatted.append(AIMessage(content=content_str))
+            else:
+                logger.warning(f"Unknown role: {role}")
+                
+    except Exception as e:
+        logger.error(f"Error formatting chat history: {str(e)}", exc_info=True)
+        # Return what we have so far
+        
     return formatted
