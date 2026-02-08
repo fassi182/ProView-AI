@@ -17,7 +17,7 @@ def get_proview_chain():
     try:
         # Initialize LLM with structured output
         llm = ChatGroq(
-            api_key=ProViewConfig.GROQ_API_KEY, 
+            api_key=ProViewConfig.get_groq_api_key(),  # Updated
             model_name=ProViewConfig.MODEL_NAME,
             temperature=ProViewConfig.TEMPERATURE
         ).with_structured_output(ProViewCoachOutput)
