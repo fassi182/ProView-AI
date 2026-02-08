@@ -5,7 +5,7 @@ import os
 import logging
 from typing import Optional
 
-# Load local .env if exists
+# Local .env support
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -27,7 +27,7 @@ if missing_keys:
     st.error(f"⚠️ Missing API keys: {', '.join(missing_keys)}")
     st.stop()
 
-# --- IMPORT YOUR MODULES AFTER LOADING KEYS ---
+# --- IMPORT AI MODULES ---
 from app.services import get_proview_response
 from app.rag_storage import (
     process_file,
@@ -37,14 +37,14 @@ from app.rag_storage import (
 )
 from app.config import ProViewConfig
 
-# Set keys in config
+# --- CONFIGURE KEYS ---
 ProViewConfig.GROQ_API_KEY = GROQ_API_KEY
 ProViewConfig.PROVIEW_API_KEY = PROVIEW_API_KEY
 ProViewConfig.LANGCHAIN_API_KEY = LANGCHAIN_API_KEY
 ProViewConfig.LANGCHAIN_TRACING_V2 = LANGCHAIN_TRACING_V2
 ProViewConfig.LANGCHAIN_PROJECT = LANGCHAIN_PROJECT
 
-# --- Logging ---
+# --- LOGGING ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,8 @@ if "last_activity" not in st.session_state:
     st.session_state.last_activity = time.time()
 
 st.session_state.last_activity = time.time()
-SESSION_TIMEOUT_SECONDS = 30 * 60
+SESSION_TIMEOUT_SECONDS = 30 * 60  # 30 minutes
+
 if time.time() - st.session_state.last_activity > SESSION_TIMEOUT_SECONDS:
     try:
         clear_session_data(st.session_state.session_id)
@@ -97,30 +98,43 @@ def initialize_system():
         st.session_state.initialized = False
         return False, str(e)
 
+
 def process_uploaded_file(uploaded_file, session_id: str):
     try:
         file_ext = os.path.splitext(uploaded_file.name)[-1].lower()
         if file_ext not in ProViewConfig.ALLOWED_EXTENSIONS:
             return False, f"Unsupported file type. Allowed: {ProViewConfig.ALLOWED_EXTENSIONS}"
+
         file_size_mb = len(uploaded_file.getvalue()) / (1024 * 1024)
         if file_size_mb > ProViewConfig.MAX_FILE_SIZE_MB:
             return False, f"File too large. Max size: {ProViewConfig.MAX_FILE_SIZE_MB}MB"
-        os.makedirs("./temp", exist_ok=True)
-        temp_path = f"./temp/{session_id}_{uploaded_file.name}"
+
+        os.makedirs("./temp/proview_db", exist_ok=True)
+        temp_path = f"./temp/proview_db/{session_id}_{uploaded_file.name}"
         with open(temp_path, "wb") as f:
             f.write(uploaded_file.getvalue())
+
         chunks_created = process_file(temp_path, session_id)
+
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
         return True, f"Successfully processed {uploaded_file.name} ({chunks_created} chunks)"
     except Exception as e:
-        logger.error(f"Error processing file: {str(e)}")
+        import traceback
+        error_text = traceback.format_exc()
+        logger.error(f"Error processing file: {error_text}")
         return False, str(e)
+
 
 def get_ai_response(user_message: str, history: list, session_id: str) -> dict:
     try:
         formatted_history = [{"role": msg["role"], "content": msg["content"]} for msg in history[-10:]]
-        response = get_proview_response(user_input=user_message, chat_history=formatted_history, session_id=session_id)
+        response = get_proview_response(
+            user_input=user_message,
+            chat_history=formatted_history,
+            session_id=session_id
+        )
         return {
             "interviewer_chat": response.interviewer_chat,
             "is_correct": response.is_correct,
@@ -129,12 +143,15 @@ def get_ai_response(user_message: str, history: list, session_id: str) -> dict:
             "suggested_replies": response.suggested_replies
         }
     except Exception as e:
-        logger.error(f"Error getting AI response: {str(e)}")
-        st.error(f"❌ Backend error: {str(e)}")  # Show real error
+        import traceback
+        error_text = traceback.format_exc()
+        st.error(f"❌ Backend error:\n{error_text}")
+        logger.error(error_text)
         return {
-            "interviewer_chat": "I encountered an error. Please try again or reset the session.",
+            "interviewer_chat": "❌ Backend error occurred. See error above.",
             "suggested_replies": ["Reset session", "Try different question"]
         }
+
 
 def reset_session():
     try:
@@ -146,6 +163,7 @@ def reset_session():
     st.session_state.session_id = str(uuid.uuid4())
     st.session_state.last_error = None
 
+
 # --- INITIALIZE SYSTEM ---
 if not st.session_state.initialized:
     with st.spinner("Initializing ProView AI..."):
@@ -154,8 +172,8 @@ if not st.session_state.initialized:
             st.error(f"⚠️ Initialization Failed: {message}")
             st.stop()
 
+
 # --- PAGE GUI ---
-# Inject CSS for styling
 st.markdown("""
 <style>
 .main { background-color: #0e1117; }
@@ -167,28 +185,29 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Sidebar
+
+# --- SIDEBAR ---
 with st.sidebar:
     st.title("⚙️ ProView Control")
     st.caption("Precision Interview Evaluation")
 
-    # Session info
     st.subheader("📊 Session Info")
     st.code(f"ID: {st.session_state.session_id[:12]}...")
     st.metric("💬 Messages", len(st.session_state.messages))
     st.metric("📄 Documents", st.session_state.documents_uploaded)
 
-    # Clear session buttons
     if st.button("Clear Chat Only"):
         st.session_state.messages = []
         st.toast("💬 Chat cleared", icon="✅")
         st.rerun()
+
     if st.button("Clear All Data"):
         reset_session()
         st.toast("🗑️ All session data cleared", icon="✅")
         st.rerun()
 
-# Header
+
+# --- HEADER ---
 col1, col2 = st.columns([0.7, 0.3])
 with col1:
     st.title("🎓 ProView AI Coach")
@@ -196,7 +215,8 @@ with col1:
 with col2:
     st.success("🟢 Ready")
 
-# File upload
+
+# --- FILE UPLOAD ---
 with st.expander("📁 Knowledge Base (Upload Resume/Job Description)"):
     uploaded_files = st.file_uploader(
         "Upload PDF/DOCX/TXT", accept_multiple_files=True,
@@ -207,12 +227,18 @@ with st.expander("📁 Knowledge Base (Upload Resume/Job Description)"):
             success, msg = process_uploaded_file(file, st.session_state.session_id)
             st.toast(msg if success else f"⚠️ {msg}")
 
-# Display chat
+
+# --- DISPLAY CHAT ---
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"] if isinstance(msg["content"], str) else msg["content"].get("interviewer_chat", ""))
+        content = msg["content"]
+        if isinstance(content, str):
+            st.markdown(content)
+        else:
+            st.markdown(content.get("interviewer_chat", ""))
 
-# Chat input
+
+# --- CHAT INPUT ---
 if prompt := st.chat_input("Start by telling ProView which role you're interviewing for..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("assistant"):
@@ -223,6 +249,7 @@ if prompt := st.chat_input("Start by telling ProView which role you're interview
         st.markdown(ai_data.get("interviewer_chat", ""))
         st.session_state.messages.append({"role": "assistant", "content": ai_data})
 
-# Footer
+
+# --- FOOTER ---
 st.markdown("---")
 st.caption("🔒 Privacy-First: Data is session-isolated and auto-deleted after 30 minutes.")
