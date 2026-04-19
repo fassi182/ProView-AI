@@ -1,297 +1,191 @@
-# 🎓 ProView AI - RAG-Powered Interview Coach
+# 🎯 ProView AI Coach
 
-A production-ready interview preparation system built with FastAPI, LangChain, and RAG (Retrieval Augmented Generation) technology. Upload your resume and job descriptions to get personalized, context-aware interview coaching.
+> AI-Powered Interview Preparation Platform
 
-## 🎯 What is ProView AI?
-
-ProView AI is an intelligent interview coach that:
-- **Simulates realistic interviews** based on your target role and experience level
-- **Evaluates your answers** with detailed feedback and scoring (0-10 scale)
-- **Personalizes questions** using your resume and job description context via RAG
-- **Maintains conversation history** across chat sessions
-
-## 🏗️ Architecture
-
-```
-┌─────────────┐
-│   Client    │ (Streamlit UI or API Consumer)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────────────────────────┐
-│      FastAPI REST API               │
-│  ┌──────────┐  ┌─────────────┐    │
-│  │Endpoints │  │Rate Limiting│    │
-│  └──────────┘  └─────────────┘    │
-└──────┬──────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────────┐
-│       Services Layer                │
-│  ┌──────────────┐  ┌────────────┐  │
-│  │ LLM Pipeline │  │RAG Storage │  │
-│  └──────────────┘  └────────────┘  │
-└──────┬───────────────────┬──────────┘
-       │                   │
-       ▼                   ▼
-┌─────────────┐    ┌──────────────┐
-│   Groq      │    │   Chroma DB  │
-│  (LLaMA 3.3)│    │  (Vector DB) │
-└─────────────┘    └──────────────┘
-```
-
-## 🛠️ Tech Stack
-
-**Backend Framework:**
-- FastAPI - High-performance REST API framework
-- Pydantic - Data validation and schema modeling
-
-**LLM & AI:**
-- LangChain - LLM orchestration and prompt management
-- Groq - Ultra-fast LLM inference (LLaMA 3.3 70B)
-- LangChain-Groq - Groq integration for LangChain
-
-**Vector Database & Embeddings:**
-- ChromaDB - Vector database for document storage
-- HuggingFace Embeddings - Sentence transformers (all-MiniLM-L6-v2)
-- LangChain-Chroma - ChromaDB integration
-
-**Document Processing:**
-- PyPDF - PDF document parsing
-- Docx2txt - Word document parsing
-- RecursiveCharacterTextSplitter - Document chunking
-
-**UI (Optional):**
-- Streamlit - Interactive web interface
-
-**Utilities:**
-- python-dotenv - Environment variable management
-- uvicorn - ASGI server
-
-## ✨ Implemented Features
-
-### 🔒 **Security & Access Control**
-- ✅ API key authentication via `X-ProView-Key` header
-- ✅ Session-based data isolation (cryptographic session IDs)
-- ✅ Rate limiting (10 requests/60 seconds per IP)
-- ✅ File size validation (10MB max)
-- ✅ File type validation (PDF/DOCX/TXT only)
-- ✅ Pydantic schema validation on all inputs
-
-### 🧠 **AI Interview Coaching**
-- ✅ Role-aware question generation
-- ✅ Answer evaluation with boolean correctness flag
-- ✅ 0-10 scoring system with detailed feedback
-- ✅ Structured output with `ProViewCoachOutput` schema
-- ✅ Suggested reply recommendations (2-3 per response)
-- ✅ Context-aware responses using RAG
-
-### 📚 **RAG & Document Management**
-- ✅ Multi-format document upload (PDF, DOCX, TXT)
-- ✅ Automatic document chunking (700 char chunks, 100 char overlap)
-- ✅ Vector embeddings with HuggingFace all-MiniLM-L6-v2
-- ✅ Similarity search with k=3 retrieval
-- ✅ Session-isolated document storage
-- ✅ Metadata tagging (session_id, timestamp, source_file)
-
-### 🗄️ **Session Management**
-- ✅ UUID-based session identification
-- ✅ Automatic session cleanup (2-hour timeout)
-- ✅ Manual session data clearing
-- ✅ Session statistics endpoint
-- ✅ Background janitor cleanup tasks
-
-### 🚀 **Performance & Optimization**
-- ✅ Singleton pattern for LLM initialization
-- ✅ Lazy loading of embeddings model
-- ✅ Background task processing
-- ✅ Efficient document retrieval with filters
-- ✅ Comprehensive logging (INFO/WARNING/ERROR levels)
-
-### 🖥️ **User Interface (Streamlit)**
-- ✅ Interactive chat interface
-- ✅ File upload widget with progress tracking
-- ✅ Session statistics display
-- ✅ Real-time feedback rendering
-- ✅ Clear session functionality
-- ✅ Auto-cleanup on inactivity (30 min timeout)
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.9+
-- Groq API key ([get one here](https://console.groq.com))
-
-### Installation
-
-1. **Clone and install**
-```bash
-git clone https://github.com/yourusername/proview-ai.git
-cd proview-ai
-pip install -r requirements.txt
-```
-
-2. **Configure environment**
-```bash
-# Create .env file
-GROQ_API_KEY=your_groq_api_key_here
-PROVIEW_API_KEY=your_secure_random_key_here
-```
-
-3. **Run the API**
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-4. **Run Streamlit UI (optional)**
-```bash
-streamlit run streamlit_app.py
-```
-
-## 📡 API Endpoints
-
-### Authentication
-All endpoints require: `X-ProView-Key: your_api_key`
-
-### Available Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check |
-| `/upload` | POST | Upload documents (PDF/DOCX/TXT) |
-| `/chat` | POST | Chat with AI coach |
-| `/clear` | POST | Clear session data |
-| `/session/{id}/stats` | GET | Get session statistics |
-| `/admin/cleanup` | POST | Manual cleanup (admin) |
-
-### Example: Chat Request
-
-```bash
-curl -X POST "http://localhost:8000/chat" \
-  -H "X-ProView-Key: your_api_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "session_id": "abc-123",
-    "user_message": "I want to prepare for a senior Python developer role",
-    "history": []
-  }'
-```
-
-**Response:**
-```json
-{
-  "ai_response": {
-    "interviewer_chat": "Great! Let's focus on senior Python concepts...",
-    "is_correct": null,
-    "score": null,
-    "refined_explanation": null,
-    "suggested_replies": [
-      "I have 5 years of Python experience",
-      "I specialize in Django and FastAPI"
-    ]
-  }
-}
-```
-
-## 🔧 Configuration
-
-Key environment variables in `app/config.py`:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `GROQ_API_KEY` | - | **Required** - Groq API key |
-| `PROVIEW_API_KEY` | - | API authentication key |
-| `MODEL_NAME` | "llama-3.3-70b-versatile" | LLM model |
-| `TEMPERATURE` | 0.3 | Response creativity |
-| `EMBEDDING_MODEL` | "all-MiniLM-L6-v2" | Embedding model |
-| `SESSION_TIMEOUT_HOURS` | 2 | Auto-cleanup interval |
-| `MAX_FILE_SIZE_MB` | 10 | Max upload size |
-| `RATE_LIMIT_REQUESTS` | 10 | Rate limit threshold |
-
-## 📁 Project Structure
-
-```
-proview-ai/
-├── app/
-│   ├── config.py           # Configuration & environment
-│   ├── llm_logic.py        # LangChain pipeline
-│   ├── rag_storage.py      # Vector DB operations
-│   ├── schemas.py          # Pydantic models
-│   └── services.py         # Business logic
-├── main.py                 # FastAPI application
-├── streamlit_app.py        # Streamlit UI
-├── requirements.txt        # Dependencies
-└── .env                    # Environment variables
-```
-
-## 🐳 Docker Deployment
-
-```dockerfile
-FROM python:3.9-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-RUN mkdir -p /app/proview_db
-EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-```bash
-docker build -t proview-ai .
-docker run -p 8000:8000 --env-file .env proview-ai
-```
-
-## 🧪 Testing
-
-```python
-# Test health check
-curl http://localhost:8000/health
-
-# Test with authentication
-curl -X POST "http://localhost:8000/upload" \
-  -H "X-ProView-Key: your_key" \
-  -F "file=@resume.pdf" \
-  -F "session_id=test-123"
-```
-
-## 🔒 Security Features
-
-1. ✅ API key authentication on all endpoints
-2. ✅ Session isolation prevents cross-user data access
-3. ✅ Rate limiting prevents abuse
-4. ✅ Input validation via Pydantic
-5. ✅ File size and type restrictions
-6. ✅ Automatic sensitive data cleanup
-
-## 📊 Monitoring
-
-Comprehensive logging implemented:
-```python
-INFO: Normal operations (uploads, chats, cleanups)
-WARNING: Potential issues (unauthorized access)
-ERROR: Failures (processing errors, DB errors)
-```
-
-Enable LangSmith tracing (optional):
-```bash
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_API_KEY=your_langsmith_key
-```
-
-## 🙏 Acknowledgments
-
-- [LangChain](https://langchain.com) - LLM orchestration
-- [Groq](https://groq.com) - Fast LLM inference
-- [ChromaDB](https://www.trychroma.com) - Vector database
-- [FastAPI](https://fastapi.tiangolo.com) - Web framework
-- [Streamlit](https://streamlit.io) - UI framework
-- [HuggingFace](https://huggingface.co) - Embedding models
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
+![Python](https://img.shields.io/badge/Python-3.9+-blue) ![Streamlit](https://img.shields.io/badge/Streamlit-UI-red) ![LangChain](https://img.shields.io/badge/LangChain-Orchestration-green) ![Groq](https://img.shields.io/badge/Groq-LLaMA_3.3_70B-purple)
 
 ---
 
-**Built with ❤️ by AI Engineers, for AI Engineers**
+## Overview
+
+ProView AI Coach is an intelligent, conversational interview preparation tool built with **Streamlit** and powered by **Groq's LLaMA 3.3 70B** model via LangChain. It simulates realistic interview sessions, evaluates your answers, and provides structured feedback to help you land your dream job.
+
+---
+
+## Features
+
+- 🎯 **Role-aware simulation** — adapts questions based on job role, seniority, and interview type
+- 📊 **Real-time evaluation** — scores answers (X/10) with targeted improvement suggestions
+- 📈 **Adaptive difficulty** — starts easy, increases based on your performance
+- 📄 **Context-aware questioning** — personalizes questions using resume or job description
+- ⚡ **Streaming responses** — character-by-character output for a natural conversation feel
+- 💬 **Full chat history** — maintains context across the entire session
+
+---
+
+## Project Structure
+
+```
+proview-ai-coach/
+│
+├── streamlit.py          # Main app entry point — UI, chat history, streaming
+├── app/
+│   ├── config.py         # Config class — loads API key, model name, temperature
+│   ├── llm_logic.py      # LangChain chain, system prompt, history formatter
+│   ├── schemas.py        # Pydantic models — ProViewCoachOutput, MessageModel
+│   └── services.py       # Service layer — invokes LLM chain, handles errors
+│
+├── .env                  # Environment variables (not committed to git)
+├── requirements.txt      # Python dependencies
+└── .gitignore            # Files excluded from version control
+```
+
+---
+
+## Prerequisites
+
+- Python 3.9+
+- A **Groq API Key** — get one free at [console.groq.com](https://console.groq.com)
+- `pip` package manager
+
+---
+
+## Installation & Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/proview-ai-coach.git
+cd proview-ai-coach
+```
+
+### 2. Create a Virtual Environment
+
+```bash
+python -m venv venv
+source venv/bin/activate        # Linux / macOS
+venv\Scripts\activate           # Windows
+```
+
+### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configure Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+GROQ_API_KEY=your_groq_api_key_here
+```
+
+### 5. Run the App
+
+```bash
+streamlit run streamlit.py
+```
+
+The app will open in your browser at `http://localhost:8501`
+
+---
+
+## requirements.txt
+
+```
+streamlit
+langchain
+langchain-groq
+langchain-core
+pydantic
+python-dotenv
+```
+
+---
+
+## .gitignore
+
+```
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+```
+
+---
+
+## How It Works
+
+### System Prompt
+
+ProView AI Coach operates under a detailed system prompt that instructs the model to:
+
+- Identify the target **job role and seniority level** before starting
+- Ask **realistic, role-specific** interview questions
+- **Score answers** on a 1–10 scale with targeted improvement suggestions
+- **Adapt difficulty** progressively based on user performance
+- Return responses in a **structured Pydantic schema**
+
+### Response Schema
+
+Every AI response is parsed into:
+
+| Field | Description |
+|---|---|
+| `interviewer_chat` | Main response / next question (**always required**) |
+| `score` | `"X/10"` rating (only after an answer is evaluated) |
+| `refined_explanation` | Detailed feedback (optional) |
+| `suggested_replies` | 2–3 improvement suggestions (optional list) |
+
+### Streaming Output
+
+Responses are displayed **character-by-character** using Streamlit's `st.empty()` placeholder, giving the feel of a live conversation.
+
+---
+
+## Usage Guide
+
+### Starting a Session
+
+1. Open the app and describe your goal, e.g.:
+   > *"I want to practice for a Senior Backend Engineer role"*
+2. The coach confirms the role, level, and interview type, then begins
+3. Answer naturally as you would in a real interview
+4. Receive **immediate scores, feedback, and follow-up questions**
+
+### Sidebar Controls
+
+| Control | Description |
+|---|---|
+| ✅ API Connected | Confirms your Groq API key is loaded |
+| 🗑️ Clear Chat | Resets the session to start fresh |
+
+---
+
+## Architecture
+
+```
+streamlit.py       →  Presentation layer  (UI, rendering, streaming)
+app/services.py    →  Application layer   (orchestrates LLM calls)
+app/llm_logic.py   →  Domain layer        (LangChain chain, prompt, history)
+app/schemas.py     →  Data layer          (Pydantic structured output models)
+app/config.py      →  Infrastructure      (environment config, model settings)
+```
+
+---
+
+## Model Information
+
+| Setting | Value |
+|---|---|
+| Model | `llama-3.3-70b-versatile` |
+| Provider | Groq |
+| Temperature | `0.7` |
+| Structured Output | LangChain `.with_structured_output()` + Pydantic |
+
+---
+
+*ProView AI Coach — Built with Streamlit, LangChain & Groq*
