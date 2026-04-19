@@ -5,6 +5,10 @@
 ![Python](https://img.shields.io/badge/Python-3.9+-blue) ![Streamlit](https://img.shields.io/badge/Streamlit-UI-red) ![LangChain](https://img.shields.io/badge/LangChain-Orchestration-green) ![Groq](https://img.shields.io/badge/Groq-LLaMA_3.3_70B-purple)
 
 ---
+## 🚀 Live Demo
+Check out the app here: https://proview-ai-85hp9t9gwe4ff4o6dp4x6b.streamlit.app/
+
+---
 
 ## Overview
 
