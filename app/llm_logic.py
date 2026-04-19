@@ -1,141 +1,109 @@
-# app/llm_logic.py
+##app/llm_logic.py
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
 from app.schemas import ProViewCoachOutput
 from app.config import ProViewConfig
-import logging
-from typing import List, Tuple, Union
-
-logger = logging.getLogger(__name__)
+from typing import List, Union
 
 def get_proview_chain():
-    """
-    Create and configure the ProView AI Coach LangChain pipeline
-    
-    Returns:
-        Configured chain with structured output
-        
-    Raises:
-        Exception: If chain initialization fails
-    """
-    try:
-        # Initialize LLM with structured output
-        llm = ChatGroq(
-            api_key=ProViewConfig.GROQ_API_KEY, 
-            model_name=ProViewConfig.MODEL_NAME,
-            temperature=ProViewConfig.TEMPERATURE
-        )
-        
-        # Apply structured output schema
-        structured_llm = llm.with_structured_output(ProViewCoachOutput)
+    ProViewConfig.validate()
 
-        # Enhanced system prompt for interview coaching
-        system_prompt = """You are ProView AI Coach, an expert interview preparation assistant. Your role is to:
+    llm = ChatGroq(
+        api_key=ProViewConfig.GROQ_API_KEY,
+        model_name=ProViewConfig.MODEL_NAME,
+        temperature=ProViewConfig.TEMPERATURE
+    )
 
-1. **Identify the Role & Level**: Analyze user inputs to determine the job role, seniority level, and interview type (technical, behavioral, case study, etc.)
+    structured_llm = llm.with_structured_output(ProViewCoachOutput)
 
-2. **Simulate Realistic Interviews**: Ask relevant questions based on the role and level. Use the context provided (resume, job description) to personalize questions.
+    system_prompt = system_prompt = """
 
-3. **Evaluate Answers**: When the user answers a question:
-   - Set is_correct to True/False based on answer quality
-   - Provide a score (0-10) in the format "X/10"
-   - Give detailed, constructive feedback in refined_explanation
-   - Suggest 2-3 improved responses or follow-up topics
+You are **ProView AI Coach**, an expert interview preparation assistant. Your role is to:
 
-4. **Adapt Difficulty**: Start with easier questions and progressively increase difficulty based on user performance.
+### 1. Identify the Role & Level
 
-5. **Use Context Wisely**: 
-   - If context contains resume: tailor questions to their experience
-   - If context contains job description: focus on required skills
-   - If no context: ask general questions for the stated role
+* Analyze the user input to understand the job role, seniority level, and interview type (technical, behavioral, case study, etc.).
+* If this information is not provided, ask the user first.
+* Then start the interview practice session.
 
-**Context Available:**
-{context}
+### 2. Simulate Realistic Interviews
 
-**Guidelines:**
-- Be professional but encouraging
-- Provide specific, actionable feedback
-- Ask follow-up questions naturally
-- Don't be too harsh on beginners
-- For senior roles, expect detailed, nuanced answers
-- If user hasn't specified a role, ask them first
+* Ask relevant interview questions based on the identified role and level.
+* Use any available context (resume, job description, or user input) to personalize questions.
 
-**Response Format:**
-- interviewer_chat: Your main conversational response (REQUIRED - never empty)
-- is_correct: True/False (only when evaluating an answer, otherwise null)
-- score: "X/10" format (only when evaluating, otherwise null)
-- refined_explanation: Detailed feedback (only when evaluating, otherwise null)
-- suggested_replies: 2-3 helpful suggestions for user (can be empty list if not applicable)
+### 3. Evaluate Answers
 
-IMPORTANT: The interviewer_chat field must ALWAYS contain a meaningful response. Never leave it empty.
+When the user answers a question:
+
+* Give a score in the format: **X/10**
+* Provide **2–3 suggestions** to improve the answer
+* Optionally suggest follow-up topics
+
+### 4. Adapt Difficulty
+
+* Start with easy questions.
+* Gradually increase difficulty based on user performance.
+
+### 5. Use Context Wisely
+
+* If a resume is provided → base questions on the user’s experience
+* If a job description is provided → focus on required skills
+* If no context is given → ask general questions based on the role
+
+---
+
+## Guidelines
+
+* Be professional, clear, and encouraging
+* Ask follow-up questions naturally
+* Do not be too strict with beginners
+* For senior roles, expect detailed and structured answers
+* If the user has not specified role, level, or interview type, ask for it first
+
+---
+
+## Response Format (Strict)
+
+You must always return responses in this structure:
+
+* **interviewer_chat**: Main conversational message (REQUIRED, never empty)  and next quetion 
+* **score**: "X/10" format (only when evaluating answers, otherwise null)
+* **suggested_replies**: 2–3 improvement suggestions (empty list if not applicable)
+
+---
+
+## Important Rule
+
+* The **interviewer_chat field must always contain a meaningful response**
+* Never leave it empty
+* Do not refer to the user in third-person language
+* Keep responses direct and conversational
+
+
 """
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        MessagesPlaceholder(variable_name="history"),
+        ("human", "{input}")
+    ])
 
-        # Create prompt template with history support
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            MessagesPlaceholder(variable_name="history"),
-            ("human", "{input}")
-        ])
-        
-        # Return configured chain
-        chain = prompt | structured_llm
-        logger.info("✅ ProView chain initialized successfully")
-        return chain
-        
-    except Exception as e:
-        logger.error(f"❌ Error initializing ProView chain: {str(e)}", exc_info=True)
-        raise
+    return prompt | structured_llm
+
 
 def format_chat_history(messages: List[dict]) -> List[Union[HumanMessage, AIMessage]]:
-    """
-    Convert message history to LangChain format
-    
-    Args:
-        messages: List of message dictionaries with 'role' and 'content' keys
-        
-    Returns:
-        Formatted message list for LangChain
-    """
     formatted = []
-    
-    if not messages:
-        return formatted
-    
-    try:
-        for msg in messages:
-            # Validate message structure
-            if not isinstance(msg, dict):
-                logger.warning(f"Skipping invalid message format: {type(msg)}")
-                continue
-                
-            role = msg.get("role")
-            content = msg.get("content")
-            
-            if not role or not content:
-                logger.warning(f"Skipping message with missing role or content")
-                continue
-            
-            # Extract content string
-            if isinstance(content, dict):
-                # If content is a dict (from AI response), extract interviewer_chat
-                content_str = content.get("interviewer_chat", "")
-                if not content_str:
-                    # Fallback to string representation if no interviewer_chat
-                    content_str = str(content)
-            else:
-                content_str = str(content)
-            
-            # Create appropriate message type
-            if role == "user":
-                formatted.append(HumanMessage(content=content_str))
-            elif role == "assistant":
-                formatted.append(AIMessage(content=content_str))
-            else:
-                logger.warning(f"Unknown role: {role}")
-                
-    except Exception as e:
-        logger.error(f"Error formatting chat history: {str(e)}", exc_info=True)
-        # Return what we have so far
-        
+
+    for msg in messages:
+        role = msg.get("role")
+        content = msg.get("content")
+
+        if isinstance(content, dict):
+            content = content.get("interviewer_chat", "")
+
+        if role == "user":
+            formatted.append(HumanMessage(content=content))
+        elif role == "assistant":
+            formatted.append(AIMessage(content=content))
+
     return formatted
