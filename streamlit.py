@@ -43,7 +43,7 @@ with st.sidebar:
 
 # ---------------- TITLE ----------------
 st.title("🎯ProView")
-st.caption("Chat with your AI interviewer")
+st.caption("Practice interviews with AI, get instant feedback, and level up your skills.")
 
 # ---------------- SHOW CHAT HISTORY ----------------
 for msg in st.session_state.messages:
