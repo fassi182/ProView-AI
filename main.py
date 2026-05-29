@@ -2,10 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth, chat, document, history  # Imported history module
 
-app = FastAPI(
-    title="ProView AI Core Microservice",
-    docs_url="/docs"
-)
+from fastapi.openapi.docs import get_swagger_ui_html
+
+app = FastAPI(title="ProView AI Core Microservice")
+
 # Crucial security configuration enabling any universal frontend interface (React Native or Web) to consume your API safely
 app.add_middleware(
     CORSMiddleware,
@@ -20,7 +20,12 @@ app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(document.router)
 app.include_router(history.router)  # Attached session history retrieval pathways
-
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url="/openapi.json",
+        title="ProView AI Core Microservice - Documentation"
+    )
 @app.get("/")
 async def root():
     return {"message": "The API is live and connected!"}
