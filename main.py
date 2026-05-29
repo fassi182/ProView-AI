@@ -4,10 +4,11 @@ from app.routers import auth, chat, document, history  # Imported history module
 
 app = FastAPI(
     title="ProView AI Core Microservice",
-    description="Decoupled high-performance backend orchestrating auth, RAG, and live AI Interview Simulations.",
-    version="2.0.0"
+    description="...",
+    version="2.0.0",
+    root_path="/",  # Crucial: Tells FastAPI to trust the proxy path
+    docs_url="/docs"
 )
-
 # Crucial security configuration enabling any universal frontend interface (React Native or Web) to consume your API safely
 app.add_middleware(
     CORSMiddleware,
