@@ -4,9 +4,15 @@ supabase
 python-dotenv
 sqlalchemy
 langchain
+langchain-core
 langchain-openai
+langchain-groq
 openai
 chromadb
 pydantic
 requests
 torch
+transformers
+pypdf
+httpx
+typing-extensions
