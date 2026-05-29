@@ -2,15 +2,17 @@
 fastapi
 uvicorn[standard]
 
-# Core Project Dependencies
-# Assuming you use these based on your structure
-pydantic
-sqlalchemy
+# Database & Authentication
+supabase
 python-dotenv
-requests
+sqlalchemy
 
-# If you are using AI/LLM logic
+# AI & Data Processing
 langchain
 langchain-openai
 openai
 chromadb
+
+# Utilities
+pydantic
+requests
