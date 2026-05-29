@@ -21,13 +21,9 @@ app.include_router(chat.router)
 app.include_router(document.router)
 app.include_router(history.router)  # Attached session history retrieval pathways
 
-@app.get("/health", tags=["System Health"])
-async def health_check():
-    """
-    Simple health check endpoint to verify that the containerized API 
-    is alive and accessible globally.
-    """
-    return {"status": "alive", "engine": "FastAPI + Supabase Cloud"}
+@app.get("/")
+async def root():
+    return {"message": "The API is live and connected!"}
 
 if __name__ == "__main__":
     import uvicorn
