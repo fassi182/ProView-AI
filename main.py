@@ -3,8 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth, chat, document, history  # Imported history module
 
 from fastapi.openapi.docs import get_swagger_ui_html
-
-app = FastAPI(title="ProView AI Core Microservice")
+app = FastAPI(
+    title="ProView API",
+    description="API for ProView services",
+    version="1.0.0",
+    docs_url="/docs",  # This ensures /docs points to Swagger
+    redoc_url="/redoc" # This ensures /redoc points to ReDoc
+)
 
 # Crucial security configuration enabling any universal frontend interface (React Native or Web) to consume your API safely
 app.add_middleware(
