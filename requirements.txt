@@ -17,3 +17,4 @@ transformers
 pypdf
 httpx
 typing-extensions
+streamlit
