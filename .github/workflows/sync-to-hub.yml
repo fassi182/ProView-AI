@@ -20,5 +20,5 @@ jobs:
         run: |
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
-          git push https://FassiUrRehman:$HF_TOKEN@huggingface.co/spaces/FassiUrRehman/proview-api main
+          git push --force https://FassiUrRehman:$HF_TOKEN@huggingface.co/spaces/FassiUrRehman/proview-api main
          
