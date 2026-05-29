@@ -20,5 +20,4 @@ jobs:
         run: |
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
-          # The --force flag will overwrite the remote to match your local state exactly
-          Sgit push --force https://FassiUrRehman:$HF_TOKEN@huggingface.co/spaces/FassiUrRehman/proview-api main
+          git push --force https://FassiUrRehman:$HF_TOKEN@huggingface.co/spaces/FassiUrRehman/proview-api main
