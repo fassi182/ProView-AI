@@ -1,18 +1,12 @@
-# Web Framework
 fastapi
 uvicorn[standard]
-
-# Database & Authentication
 supabase
 python-dotenv
 sqlalchemy
-
-# AI & Data Processing
 langchain
 langchain-openai
 openai
 chromadb
-
-# Utilities
 pydantic
 requests
+torch
