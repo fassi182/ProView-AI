@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt
 COPY . .
 
 # 7. Expose the port that FastAPI will run on
-EXPOSE 8000
+EXPOSE 7860
 
 # 8. Define the command to start your application
 # Ensure 'main:app' matches your filename 'main.py' and your FastAPI instance 'app'

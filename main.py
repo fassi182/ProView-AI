@@ -4,9 +4,7 @@ from app.routers import auth, chat, document, history  # Imported history module
 
 app = FastAPI(
     title="ProView AI Core Microservice",
-    docs_url="/docs",
-    # This root_path is essential for HF Spaces to map your routes correctly
-    root_path="/spaces/FassiUrRehman/proview-api" 
+    docs_url="/docs"
 )
 # Crucial security configuration enabling any universal frontend interface (React Native or Web) to consume your API safely
 app.add_middleware(
