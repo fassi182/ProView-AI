@@ -1,0 +1,16 @@
+# Web Framework
+fastapi
+uvicorn[standard]
+
+# Core Project Dependencies
+# Assuming you use these based on your structure
+pydantic
+sqlalchemy
+python-dotenv
+requests
+
+# If you are using AI/LLM logic
+langchain
+langchain-openai
+openai
+chromadb
